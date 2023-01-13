@@ -71,7 +71,73 @@ app.post("/register/", async (request, response) => {
     }
 });
 
+//API 2
 
+app.post("/login", async (request, response) => {
+  const { username, password } = request.body;
+  const SearchQuery = `
+    SELECT
+    *
+    FROM 
+    user
+    WHERE
+    username="${username}"`;
+  const SearchedQuery = await DataBase.get(SearchQuery);
+  if (SearchedQuery === undefined) {
+    response.status(400);
+    response.send("Invalid user");
+  } else {
+    const isPasswordMatched = await bcrypt.compare(password, DataBase.password);
+    if (isPasswordMatched === true) {
+      response.status(200);
+      response.send("Login success!");
+    } else {
+      response.status(400);
+      response.send("Invalid password");
+    }
+  }
+});
+
+//API 3
+
+app.put("/change-password", async (request, response) => {
+  const { username, oldPassword, newPassword } = request.body;
+  const searchQuery = `
+    SELECT 
+    *
+    FROM
+    user
+    WHERE
+    username="${username}"`;
+  const searchingQuery = await DataBase.get(searchQuery);
+  const previousPassword = await bcrypt.compare(
+    oldPassword,
+    searchingQuery.password
+  );
+
+  if (previousPassword !== true) {
+    response.status(400);
+    response.send("Invalid current password");
+  } else {
+    const passwordLength = newPassword.length;
+
+    if (passwordLength < 5) {
+      response.status(400);
+      response.send("Password is too short");
+    } else {
+      const securePassword = await bcrypt.hash(newPassword, 10);
+      const UpdatePassword = `
+      UPDATE
+      user
+      SET
+      password="${securePassword}"
+      WHERE username="${username}"`;
+      await DataBase.run(UpdatePassword);
+      response.status(200);
+      response.send("Password updated");
+    }
+  }
+});
 
 module.exports = app;
 
